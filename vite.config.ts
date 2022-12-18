@@ -8,14 +8,14 @@ import vuePugPlugin from 'vue-pug-plugin'
 export default defineConfig({
 	plugins: [
 		vue({
-      template: {
-        preprocessOptions: {
-          plugins: [
-            vuePugPlugin,
-          ]
-        },
-      },
-    }),
+			template: {
+				preprocessOptions: {
+					plugins: [
+						vuePugPlugin,
+					]
+				},
+			},
+		}),
 	],
 	resolve: {
 		alias: {
