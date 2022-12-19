@@ -1,6 +1,14 @@
 <template lang="pug">
 
 #top
+	h1.box
+		| S-process toy (by&nbsp;
+		a(href="https://github.com/blainehansen/s-process-toy/") Blaine Hansen
+		| )
+
+	.box
+		a(href="https://github.com/blainehansen/s-process-toy/blob/main/description.md") Check out this project's description to understand what it is and all the ways it is unfinished.
+
 	#container(ref="container"): svg(viewbox='0 0 100 100')
 		CurveComponent(
 			v-for="(renderedCurve, index) in renderedCurves",
@@ -134,7 +142,7 @@ body { margin: 0; }
 	display: block;
 	margin: auto;
 
-	overflow: hidden;
+	overflow-x: hidden;
 	width: 100%;
 	height: 100vh;
 }
