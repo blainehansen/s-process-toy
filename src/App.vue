@@ -1,88 +1,97 @@
+<template lang="pug">
+
+#top
+	#container(ref="container"): svg(viewbox='0 0 100 100')
+		CurveComponent(
+			v-for="(renderedCurve, index) in renderedCurves",
+			@selectCurve="type => selectCurve(index, type)",
+			:index="index",
+			:renderedCurve="renderedCurve",
+		)
+
+</template>
+
+
 <script setup lang="ts">
 import { ref, reactive, watch, computed, onMounted } from 'vue'
-import { useElementSize, useMouseInElement } from '@vueuse/core'
+import { useElementSize, useMouseInElement, useEventListener } from '@vueuse/core'
 
-type Point = { x: number, y: number }
-const enum PointType {
-	Start,
-	Mid,
-	End,
-}
-const startY = ref(0)
-const mid = reactive({ x: 0, y: 0 } as Point)
-const endX = ref(0)
-const dragTarget = ref(null as PointType | null)
+import CurveComponent from '@/Curve.vue'
+import { PointType } from '@/utils'
+import type { Curve, RenderedCurve } from '@/utils'
 
-const container = ref(null)
-const { width: size } = useElementSize(container)
-const { elementX, elementY, isOutside } = useMouseInElement(container)
-function translateCoordinate(n: number) {
+const container = ref<HTMLDivElement>()
+const { width, height } = useElementSize(container)
+const size = computed(() => Math.min(width.value, height.value))
+
+function translate(n: number) {
 	return (n / 100) * size.value
 }
-function setPoints(newStart: number, newMid: Point, newEnd: number) {
-	startY.value = translateCoordinate(newStart)
-	mid.x = translateCoordinate(newMid.x)
-	mid.y = translateCoordinate(newMid.y)
-	endX.value = translateCoordinate(newEnd)
-}
 
-const unwatchSize = watch(size, newSize => {
-	if (newSize === 0) return
-	setPoints(10, { x: 50, y: 50 }, 90)
-	unwatchSize()
-})
+const startX = 0
+const endY = computed(() => translate(100))
 
+
+const curves = ref([{
+	startY: 10,
+	midX: 50,
+	midY: 50,
+	endX: 90,
+}] as Curve[])
+
+const renderedCurves = computed(() => curves.value.map((curve): RenderedCurve => {
+	const startY = translate(curve.startY)
+	const midX = translate(curve.midX)
+	const midY = translate(curve.midY)
+	const endX = translate(curve.endX)
+
+	return { startX, startY, midX, midY, endX, endY: endY.value }
+}))
+
+const { elementX, elementY } = useMouseInElement(container)
+
+const dragTarget = ref(null as [number, PointType] | null)
 
 function drag() {
 	if (dragTarget.value === null) return
 
-	switch (dragTarget.value) {
+	const [index, type] = dragTarget.value
+	const curve = curves.value[index]
+	if (curve === undefined)
+		throw new Error(`no curve at index ${index}`)
+
+	const pointX = (elementX.value / size.value) * 100
+	const pointY = (elementY.value / size.value) * 100
+
+	switch (type) {
 	case PointType.Start:
-		startY.value = Math.min(elementY.value, mid.y)
+		// min <= startY <= midY
+		curve.startY = Math.max(Math.min(pointY, curve.midY), 0)
 		break
 	case PointType.Mid:
-		if (isOutside.value) return
-		mid.x = Math.min(elementX.value, endX.value)
-		mid.y = Math.max(elementY.value, startY.value)
+		// min <= midX <= endX
+		curve.midX = Math.max(Math.min(pointX, curve.endX), 0)
+		// startY <= midY <= max
+		curve.midY = Math.min(Math.max(pointY, curve.startY), 100)
 		break
 	case PointType.End:
-		endX.value = Math.max(elementX.value, mid.x)
+		// endX <= midX <= max
+		curve.endX = Math.min(Math.max(pointX, curve.midX), 100)
 		break
 	}
 }
 function release() {
 	dragTarget.value = null
 }
-function begin(pointType: PointType) {
-	dragTarget.value = pointType
+function selectCurve(index: number, type: PointType) {
+	dragTarget.value = [index, type]
 }
 
-
-const startX = 0
-const endY = computed(() => translateCoordinate(100))
-
-function pointString({ x, y }: Point) {
-	return `${x} ${y}`
-}
-const curve = computed(() => {
-	const startString = pointString({ x: startX, y: startY.value })
-	const midString = pointString(mid)
-	const endString = pointString({ x: endX.value, y: endY.value })
-
-	// 'M50 50 Q0 0, 90 0'
-	return `M${startString} L${midString} L${endString}`
-})
+useEventListener(window, 'mousemove', drag)
+useEventListener(window, 'mouseup', release)
 </script>
 
-<template lang="pug">
-
-#top(@mousemove="drag", @mouseup="release"): #container(ref="container"): svg(viewbox='0 0 100 100')
-	path.curve(:d="curve")
-	circle#start.ctrl(@mousedown="begin(PointType.Start)", :cx="startX", :cy="startY", r="0.5vw")
-	circle#mid.ctrl(@mousedown="begin(PointType.Mid)", :cx="mid.x", :cy="mid.y", r="0.5vw")
-	circle#end.ctrl(@mousedown="begin(PointType.End)", :cx="endX", :cy="endY", r="0.5vw")
-
-</template>
+<!-- https://codepen.io/thebabydino/pen/QwyxVN -->
 
 <style>
 body { margin: 0; }
@@ -95,8 +104,10 @@ body { margin: 0; }
 #container {
 	display: block;
 	margin: auto;
-	width: 50vw;
-	height: 50vw;
+	width: 30vw;
+	height: 30vw;
+	margin-top: 50px;
+	margin-bottom: 50px;
 }
 svg {
 	display: block;
@@ -109,7 +120,7 @@ svg {
 	stroke: black;
 	stroke-width: 3;
 }
-.ctrl {
+.point {
 	cursor: pointer;
 	fill: white;
 	stroke: white;
