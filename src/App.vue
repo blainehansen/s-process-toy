@@ -9,6 +9,22 @@
 			:renderedCurve="renderedCurve",
 		)
 
+	.box(v-for="(curve, index) in curves")
+		p(:style="{ color: colorAtIndex(index) }")
+			| {{ curve.name }}:&nbsp;
+			| start={{ curve.startY.toFixed(2) }},&nbsp;
+			| mid={ x:{{ curve.midX.toFixed(2) }}, y:{{ curve.midY.toFixed(2) }} },&nbsp;
+			| end={{ curve.endX.toFixed(2) }}
+		button(@click="removeCurve(index)") remove curve
+
+	br
+	br
+	br
+	.box
+		input(v-model="newName", @keydown.enter="addCurve", placeholder="curve name")
+		br
+		button(@click="addCurve", :disabled="!newName.length") add new curve
+
 </template>
 
 
@@ -31,21 +47,41 @@ function translate(n: number) {
 const startX = 0
 const endY = computed(() => translate(100))
 
-
-const curves = ref([{
+const defaultCurve = {
 	startY: 10,
 	midX: 50,
 	midY: 50,
 	endX: 90,
-}] as Curve[])
+}
+const curves = ref([{ name: "first curve", ...defaultCurve}] as Curve[])
 
-const renderedCurves = computed(() => curves.value.map((curve): RenderedCurve => {
+const newName = ref('')
+function addCurve() {
+	curves.value.push({ name: newName.value, ...defaultCurve })
+	newName.value = ''
+}
+function removeCurve(index: number) {
+	curves.value.splice(index, 1)
+}
+
+const colors = ['red', 'green', 'blue', 'orange', 'purple', 'yellow']
+const colorsLength = colors.length
+
+function colorAtIndex(index: number) {
+	const colorIndex = index % colorsLength
+	return colors[colorIndex]
+}
+
+
+const renderedCurves = computed(() => curves.value.map((curve, index): RenderedCurve => {
+	const color = colorAtIndex(index)
+
 	const startY = translate(curve.startY)
 	const midX = translate(curve.midX)
 	const midY = translate(curve.midY)
 	const endX = translate(curve.endX)
 
-	return { startX, startY, midX, midY, endX, endY: endY.value }
+	return { color, startX, startY, midX, midY, endX, endY: endY.value }
 }))
 
 const { elementX, elementY } = useMouseInElement(container)
@@ -91,12 +127,13 @@ useEventListener(window, 'mousemove', drag)
 useEventListener(window, 'mouseup', release)
 </script>
 
-<!-- https://codepen.io/thebabydino/pen/QwyxVN -->
-
 <style>
 body { margin: 0; }
 
 #top {
+	display: block;
+	margin: auto;
+
 	overflow: hidden;
 	width: 100%;
 	height: 100vh;
@@ -111,21 +148,25 @@ body { margin: 0; }
 }
 svg {
 	display: block;
-	background: dimgrey;
+	background: lightgrey;
 	width: 100%;
 	height: 100%;
 }
 .curve {
 	fill: none;
-	stroke: black;
 	stroke-width: 3;
+	stroke-opacity: 0.8;
 }
 .point {
 	cursor: pointer;
-	fill: white;
-	stroke: white;
-	stroke-width: 2
+	stroke-width: 2;
+	fill-opacity: 0.5;
+	stroke-opacity: 0.8;
 }
-
+.box {
+	display: block;
+	margin: auto;
+	text-align: center;
+}
 
 </style>

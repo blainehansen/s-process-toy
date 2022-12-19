@@ -1,10 +1,19 @@
 <template lang="pug">
 
 g
-	path.curve(:d="curve")
-	circle#start.point(@mousedown="emit('selectCurve', PointType.Start)", :cx="props.renderedCurve.startX", :cy="props.renderedCurve.startY", r="0.5vw")
-	circle#mid.point(@mousedown="emit('selectCurve', PointType.Mid)", :cx="props.renderedCurve.midX", :cy="props.renderedCurve.midY", r="0.5vw")
-	circle#end.point(@mousedown="emit('selectCurve', PointType.End)", :cx="props.renderedCurve.endX", :cy="props.renderedCurve.endY", r="0.5vw")
+	path.curve(:d="curve", :stroke="props.renderedCurve.color")
+	circle#start.point(
+		@mousedown="emit('selectCurve', PointType.Start)", :cx="props.renderedCurve.startX", :cy="props.renderedCurve.startY",
+		r="0.5vw", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
+	)
+	circle#mid.point(
+		@mousedown="emit('selectCurve', PointType.Mid)", :cx="props.renderedCurve.midX", :cy="props.renderedCurve.midY",
+		r="0.5vw", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
+	)
+	circle#end.point(
+		@mousedown="emit('selectCurve', PointType.End)", :cx="props.renderedCurve.endX", :cy="props.renderedCurve.endY",
+		r="0.5vw", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
+	)
 
 </template>
 

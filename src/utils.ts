@@ -1,4 +1,5 @@
 export type Curve = {
+	name: string,
 	startY: number,
 	midX: number,
 	midY: number,
@@ -6,6 +7,7 @@ export type Curve = {
 }
 
 export type RenderedCurve = {
+	color: string,
 	startX: number,
 	startY: number,
 	midX: number,
