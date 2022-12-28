@@ -14,6 +14,7 @@ export type RenderedCurve = {
 	midY: number,
 	endX: number,
 	endY: number,
+	curve: string,
 }
 
 export const enum PointType {

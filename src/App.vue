@@ -25,24 +25,24 @@
 			| end={{ curve.endX.toFixed(2) }}
 		button(@click="removeCurve(index)") remove curve
 
-	br
-	br
-	br
 	.box
 		input(v-model="newName", @keydown.enter="addCurve", placeholder="curve name")
 		br
 		button(@click="addCurve", :disabled="!newName.length") add new curve
 
+	.box
+		button(@click="loadFromSheet", :disabled="client === null") load from google sheets
+		//- button(@click="saveToSheet", :disabled="client === null") save to google sheets
+
 </template>
 
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed, onMounted } from 'vue'
+import { type Ref, ref, reactive, watch, computed, onMounted } from 'vue'
 import { useElementSize, useMouseInElement, useEventListener } from '@vueuse/core'
 
 import CurveComponent from '@/Curve.vue'
-import { PointType } from '@/utils'
-import type { Curve, RenderedCurve } from '@/utils'
+import { PointType, type Curve, type RenderedCurve } from '@/utils'
 
 const container = ref<HTMLDivElement>()
 const { width, height } = useElementSize(container)
@@ -89,8 +89,83 @@ const renderedCurves = computed(() => curves.value.map((curve, index): RenderedC
 	const midY = translate(curve.midY)
 	const endX = translate(curve.endX)
 
-	return { color, startX, startY, midX, midY, endX, endY: endY.value }
+	// https://math.stackexchange.com/questions/3978437/is-it-possible-to-find-the-control-points-of-a-quadratic-bezier-curve-given-the
+	return {
+		color, startX, startY, midX, midY, endX, endY: endY.value,
+		curve: `M${startX} ${startY} Q${midX} ${midY}, ${endX} ${endY.value}`,
+	}
 }))
+
+
+
+const accessToken = ref(null as null | string)
+const client = ref(null as null | unknown)
+
+function initialize() {
+	const scriptTag = document.createElement('script')
+	scriptTag.src = 'https://accounts.google.com/gsi/client'
+	scriptTag.async = true
+	scriptTag.defer = true
+	// isLoading.value = true
+	scriptTag.onload = () => {
+		// isLoading.value = false
+		// loaded.value = true
+		client.value = (window as any).google.accounts.oauth2.initTokenClient({
+			client_id: '192502375938-c06iprnuf2la46a34eut874bauqbbdi4.apps.googleusercontent.com',
+			scope: 'https://www.googleapis.com/auth/spreadsheets',
+			callback: (tokenResponse: { access_token: string }) => {
+				accessToken.value = tokenResponse.access_token
+			},
+		})
+	}
+
+	scriptTag.onerror = () => {
+		// isLoading.value = false
+		// error.value = true
+		console.error('failed to load gsi client')
+	}
+	document.head.appendChild(scriptTag)
+}
+onMounted(initialize)
+
+function refPromise<T>(r: Ref<T>): Promise<NonNullable<T>> {
+	let resolver!: (value: NonNullable<T>) => void
+	const promise = new Promise<NonNullable<T>>(resolve => { resolver = resolve })
+
+	const unwatch = watch(r, value => {
+		if (value === null || value === undefined)
+			return
+		resolver(value as NonNullable<T>)
+		unwatch()
+	})
+	return promise
+}
+
+
+async function loadFromSheet() {
+	(client.value as any).requestAccessToken()
+	const realAccessToken = await refPromise(accessToken)
+	const spreadsheetId = '1ROl3CHhKfGS55HSelmftcOr2kSgmZJvdwB4b8ktP8hI'
+
+	const response = await fetch(
+		`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:E`,
+		{
+			headers: {
+				'Authorization': 'Bearer ' + realAccessToken,
+				// 'Content-Type': 'application/json'
+			},
+			// body: JSON.stringify(data),
+		},
+	).then(response => response.json())
+
+	console.log(response)
+}
+
+
+// function revokeToken() {
+// 	(window as any).google.accounts.oauth2.revoke(access_token, () => {console.log('access token revoked')})
+// }
+
 
 const { elementX, elementY } = useMouseInElement(container)
 
@@ -174,7 +249,11 @@ svg {
 .box {
 	display: block;
 	margin: auto;
+	margin-top: 2rem;
 	text-align: center;
+}
+h1.box {
+	margin-top: 0;
 }
 
 </style>
