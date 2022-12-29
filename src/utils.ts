@@ -22,3 +22,7 @@ export const enum PointType {
 	Mid,
 	End,
 }
+
+export function tuple<L extends any[]>(...values: L): L {
+	return values as L
+}

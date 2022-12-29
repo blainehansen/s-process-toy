@@ -31,8 +31,8 @@
 		button(@click="addCurve", :disabled="!newName.length") add new curve
 
 	.box
-		button(@click="loadFromSheet", :disabled="client === null") load from google sheets
-		//- button(@click="saveToSheet", :disabled="client === null") save to google sheets
+		//- button(@click="loadFromSheet", :disabled="client === null") load from google sheets
+		button(@click="saveToSheet", :disabled="client === null") save to Google Sheets
 
 </template>
 
@@ -42,7 +42,7 @@ import { type Ref, ref, reactive, watch, computed, onMounted } from 'vue'
 import { useElementSize, useMouseInElement, useEventListener } from '@vueuse/core'
 
 import CurveComponent from '@/Curve.vue'
-import { PointType, type Curve, type RenderedCurve } from '@/utils'
+import { PointType, type Curve, type RenderedCurve, tuple as t } from '@/utils'
 
 const container = ref<HTMLDivElement>()
 const { width, height } = useElementSize(container)
@@ -106,10 +106,7 @@ function initialize() {
 	scriptTag.src = 'https://accounts.google.com/gsi/client'
 	scriptTag.async = true
 	scriptTag.defer = true
-	// isLoading.value = true
 	scriptTag.onload = () => {
-		// isLoading.value = false
-		// loaded.value = true
 		client.value = (window as any).google.accounts.oauth2.initTokenClient({
 			client_id: '192502375938-c06iprnuf2la46a34eut874bauqbbdi4.apps.googleusercontent.com',
 			scope: 'https://www.googleapis.com/auth/spreadsheets',
@@ -118,10 +115,7 @@ function initialize() {
 			},
 		})
 	}
-
 	scriptTag.onerror = () => {
-		// isLoading.value = false
-		// error.value = true
 		console.error('failed to load gsi client')
 	}
 	document.head.appendChild(scriptTag)
@@ -141,30 +135,123 @@ function refPromise<T>(r: Ref<T>): Promise<NonNullable<T>> {
 	return promise
 }
 
+// async function loadFromSheet() {
+// 	(client.value as any).requestAccessToken()
+// 	const realAccessToken = await refPromise(accessToken)
+// 	const spreadsheetId = '1ROl3CHhKfGS55HSelmftcOr2kSgmZJvdwB4b8ktP8hI'
 
-async function loadFromSheet() {
-	(client.value as any).requestAccessToken()
-	const realAccessToken = await refPromise(accessToken)
-	const spreadsheetId = '1ROl3CHhKfGS55HSelmftcOr2kSgmZJvdwB4b8ktP8hI'
+// 	// https://developers.google.com/sheets/api/guides/migration#v4-api_4
+// 	// https://developers.google.com/drive/api/guides/api-specific-auth#OAuth2Authorizing
+// 	const response = await fetch(
+// 		`https://www.googleapis.com/drive/v3/files?q=mimeType='application/vnd.google-apps.spreadsheet'`
 
-	const response = await fetch(
-		`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:E`,
-		{
-			headers: {
-				'Authorization': 'Bearer ' + realAccessToken,
-				// 'Content-Type': 'application/json'
-			},
-			// body: JSON.stringify(data),
-		},
-	).then(response => response.json())
+// 		`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:E`,
+// 		{
+// 			headers: {
+// 				'Authorization': 'Bearer ' + realAccessToken,
+// 				// 'Content-Type': 'application/json'
+// 			},
+// 			// body: JSON.stringify(data),
+// 		},
+// 	).then(response => response.json())
 
-	console.log(response)
+// 	console.log(response)
+// }
+
+type Row = [object, object, object, object, object]
+type RowData = { values: Row }
+
+const header: Row = [
+	{ 'userEnteredValue': { 'stringValue': 'curve name' } },
+	{ 'userEnteredValue': { 'stringValue': 'startY' } },
+	{ 'userEnteredValue': { 'stringValue': 'midX' } },
+	{ 'userEnteredValue': { 'stringValue': 'midY' } },
+	{ 'userEnteredValue': { 'stringValue': 'endX' } },
+]
+
+function formatData(): RowData[] {
+	const formattedCurves = curves.value.map(({ name, startY, midX, midY, endX }): RowData => ({ 'values': [
+		{ 'userEnteredValue': { 'stringValue': name } },
+		{ 'userEnteredValue': { 'numberValue': startY } },
+		{ 'userEnteredValue': { 'numberValue': midX } },
+		{ 'userEnteredValue': { 'numberValue': midY } },
+		{ 'userEnteredValue': { 'numberValue': endX } },
+	] }))
+
+	return [{ 'values': header }].concat(formattedCurves)
 }
 
+async function saveToSheet() {
+	const spreadsheetName = window.prompt('New spreadsheet name')
+	if (spreadsheetName === null)
+		return
+	if (spreadsheetName === '') {
+		window.alert("name can't be empty!")
+		return
+	}
 
-// function revokeToken() {
-// 	(window as any).google.accounts.oauth2.revoke(access_token, () => {console.log('access token revoked')})
-// }
+	const realAccessToken = await (async () => {
+		if (accessToken.value !== null) return accessToken.value
+		;(client.value as any).requestAccessToken()
+		return await refPromise(accessToken)
+	})()
+
+	const response = await fetch(
+		`https://sheets.googleapis.com/v4/spreadsheets`,
+		{
+			method: 'POST',
+			headers: {
+				'Authorization': 'Bearer ' + realAccessToken,
+			},
+			body: JSON.stringify({
+				'properties': { 'title': spreadsheetName },
+				'sheets': [{ 'data': [{
+					'startRow': 0,
+					'startColumn': 0,
+					'rowData': formatData(),
+				}] }],
+			}),
+		},
+	)
+	if (!response.ok) {
+		window.alert("Something went wrong?")
+		console.error(response)
+		return
+	}
+	const { spreadsheetUrl } = await response.json()
+	window.alert(`Saved to spreadsheet: ${spreadsheetUrl}`)
+
+
+	// const spreadsheetId = '1ROl3CHhKfGS55HSelmftcOr2kSgmZJvdwB4b8ktP8hI'
+	// const data = {
+	// 	'majorDimension': 'ROWS',
+	// 	'values': [""].concat(
+	// 		curves.value.map(({ name, startY, midX, midY, endX }) => t(name, startY, midX, midY, endX))
+	// 	),
+	// }
+	// await fetch(
+	// 	`/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:E:clear`,
+	// 	{
+	// 		method: 'POST',
+	// 		headers: {
+	// 			'Authorization': 'Bearer ' + realAccessToken,
+	// 		},
+	// 	},
+	// )
+
+	// const response = await fetch(
+	// 	`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:E?valueInputOption=USER_ENTERED`,
+	// 	{
+	// 		method: 'PUT',
+	// 		headers: {
+	// 			'Authorization': 'Bearer ' + realAccessToken,
+	// 			'Content-Type': 'application/json'
+	// 		},
+	// 		body: JSON.stringify(data),
+	// 	},
+	// ).then(response => response.json())
+	// console.log(response)
+}
 
 
 const { elementX, elementY } = useMouseInElement(container)
