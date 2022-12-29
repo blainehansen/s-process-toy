@@ -2,7 +2,7 @@ Hello Survival and Flourishing Fund!
 
 This repo is a small toy version of the S-process. It represents roughly three sessions of tinkering, mostly just to help my application stand out 😊
 
-It's obviously just a small thing, and intentionally ignores lots of details I would flesh out fully if this were the "real" project. This readme lists some of those ignored pieces and what I would theoretically do next.
+It's obviously just a small thing, and intentionally ignores lots of details I would flesh out fully if this were the "real" project. This page lists some of those ignored pieces and what I would theoretically do next.
 
 # Ignored details
 
