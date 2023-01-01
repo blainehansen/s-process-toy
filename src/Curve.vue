@@ -3,16 +3,19 @@
 g
 	path.curve(:d="props.renderedCurve.curve", :stroke="props.renderedCurve.color")
 	circle#start.point(
+		@touchstart.prevent="emit('selectCurve', PointType.Start)",
 		@mousedown="emit('selectCurve', PointType.Start)", :cx="props.renderedCurve.startX", :cy="props.renderedCurve.startY",
-		r="0.5vw", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
+		r="0.5rem", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
 	)
 	circle#mid.point(
+		@touchstart.prevent="emit('selectCurve', PointType.Mid)",
 		@mousedown="emit('selectCurve', PointType.Mid)", :cx="props.renderedCurve.midX", :cy="props.renderedCurve.midY",
-		r="0.5vw", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
+		r="0.5rem", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
 	)
 	circle#end.point(
+		@touchstart.prevent="emit('selectCurve', PointType.End)",
 		@mousedown="emit('selectCurve', PointType.End)", :cx="props.renderedCurve.endX", :cy="props.renderedCurve.endY",
-		r="0.5vw", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
+		r="0.5rem", :stroke="props.renderedCurve.color", :fill="props.renderedCurve.color",
 	)
 
 </template>

@@ -1,15 +1,20 @@
 <template lang="pug">
 
 #top
-	h1.box
-		| S-process toy (by&nbsp;
-		a(href="https://github.com/blainehansen/s-process-toy/") Blaine Hansen
-		| )
+	.box(class="text-base prose prose-slate xl:text-xl")
+		h1
+			| S-process toy (by&nbsp;
+			a(href="https://github.com/blainehansen/s-process-toy/") Blaine Hansen
+			| )
 
-	.box
-		a(href="https://github.com/blainehansen/s-process-toy/blob/main/description.md") Check out this project's description to understand what it is and all the ways it is unfinished.
+		p
+			| Read the description below to understand what this project is
+			br
+			| and all the ways it is&nbsp;
+			i unfinished
+			|.
 
-	#container(ref="container"): svg(viewbox='0 0 100 100')
+	#container(ref="container", class="w-[70vw] h-[70vw] lg:w-[40vw] lg:h-[40vw] xl:w-[30vw] xl:h-[30vw]"): svg(viewbox='0 0 100 100')
 		CurveComponent(
 			v-for="(renderedCurve, index) in renderedCurves",
 			@selectCurve="type => selectCurve(index, type)",
@@ -17,36 +22,41 @@
 			:renderedCurve="renderedCurve",
 		)
 
+	.box: button(@click="curvyMode = !curvyMode") "curvy" mode {{ curvyMode ? "on" : "off" }}
+
 	.box(v-for="(curve, index) in curves")
 		p(:style="{ color: colorAtIndex(index) }")
-			| {{ curve.name }}:&nbsp;
+			b {{ curve.name }}:&nbsp;
 			| start={{ curve.startY.toFixed(2) }},&nbsp;
 			| mid={ x:{{ curve.midX.toFixed(2) }}, y:{{ curve.midY.toFixed(2) }} },&nbsp;
 			| end={{ curve.endX.toFixed(2) }}
-		button(@click="removeCurve(index)") remove curve
+		button(v-if="curves.length > 1", @click="removeCurve(index)") remove curve
 
 	.box
-		input(v-model="newName", @keydown.enter="addCurve", placeholder="curve name")
+		input(v-model="newName", @keydown.enter="addCurve", placeholder="new curve name")
 		br
-		button(@click="addCurve", :disabled="!newName.length") add new curve
+		button(@click="addCurve", :disabled="!newName.length") add curve
 
 	.box
-		//- button(@click="loadFromSheet", :disabled="client === null") load from google sheets
 		button(@click="saveToSheet", :disabled="client === null") save to Google Sheets
+
+	.box(class="text-base prose prose-slate xl:text-xl text-left"): Description
 
 </template>
 
 
 <script setup lang="ts">
-import { type Ref, ref, reactive, watch, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useElementSize, useMouseInElement, useEventListener } from '@vueuse/core'
 
 import CurveComponent from '@/Curve.vue'
-import { PointType, type Curve, type RenderedCurve, tuple as t } from '@/utils'
+import { PointType, type Curve, type RenderedCurve, refPromise } from '@/utils'
+import Description from './Description.md'
 
 const container = ref<HTMLDivElement>()
 const { width, height } = useElementSize(container)
 const size = computed(() => Math.min(width.value, height.value))
+const curvyMode = ref(false)
 
 function translate(n: number) {
 	return (n / 100) * size.value
@@ -61,10 +71,11 @@ const defaultCurve = {
 	midY: 50,
 	endX: 90,
 }
-const curves = ref([{ name: "first curve", ...defaultCurve}] as Curve[])
+const curves = ref([{ name: "my first curve", ...defaultCurve}] as Curve[])
 
 const newName = ref('')
 function addCurve() {
+	if (newName.value.length === 0) return
 	curves.value.push({ name: newName.value, ...defaultCurve })
 	newName.value = ''
 }
@@ -89,10 +100,12 @@ const renderedCurves = computed(() => curves.value.map((curve, index): RenderedC
 	const midY = translate(curve.midY)
 	const endX = translate(curve.endX)
 
-	// https://math.stackexchange.com/questions/3978437/is-it-possible-to-find-the-control-points-of-a-quadratic-bezier-curve-given-the
 	return {
 		color, startX, startY, midX, midY, endX, endY: endY.value,
-		curve: `M${startX} ${startY} Q${midX} ${midY}, ${endX} ${endY.value}`,
+		// https://math.stackexchange.com/questions/3978437/is-it-possible-to-find-the-control-points-of-a-quadratic-bezier-curve-given-the
+		curve: curvyMode.value
+			? `M${startX} ${startY} Q${midX} ${midY}, ${endX} ${endY.value}`
+			: `M${startX} ${startY} L${midX} ${midY} L${endX} ${endY.value}`,
 	}
 }))
 
@@ -121,42 +134,6 @@ function initialize() {
 	document.head.appendChild(scriptTag)
 }
 onMounted(initialize)
-
-function refPromise<T>(r: Ref<T>): Promise<NonNullable<T>> {
-	let resolver!: (value: NonNullable<T>) => void
-	const promise = new Promise<NonNullable<T>>(resolve => { resolver = resolve })
-
-	const unwatch = watch(r, value => {
-		if (value === null || value === undefined)
-			return
-		resolver(value as NonNullable<T>)
-		unwatch()
-	})
-	return promise
-}
-
-// async function loadFromSheet() {
-// 	(client.value as any).requestAccessToken()
-// 	const realAccessToken = await refPromise(accessToken)
-// 	const spreadsheetId = '1ROl3CHhKfGS55HSelmftcOr2kSgmZJvdwB4b8ktP8hI'
-
-// 	// https://developers.google.com/sheets/api/guides/migration#v4-api_4
-// 	// https://developers.google.com/drive/api/guides/api-specific-auth#OAuth2Authorizing
-// 	const response = await fetch(
-// 		`https://www.googleapis.com/drive/v3/files?q=mimeType='application/vnd.google-apps.spreadsheet'`
-
-// 		`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:E`,
-// 		{
-// 			headers: {
-// 				'Authorization': 'Bearer ' + realAccessToken,
-// 				// 'Content-Type': 'application/json'
-// 			},
-// 			// body: JSON.stringify(data),
-// 		},
-// 	).then(response => response.json())
-
-// 	console.log(response)
-// }
 
 type Row = [object, object, object, object, object]
 type RowData = { values: Row }
@@ -220,38 +197,16 @@ async function saveToSheet() {
 	}
 	const { spreadsheetUrl } = await response.json()
 	window.alert(`Saved to spreadsheet: ${spreadsheetUrl}`)
-
-
-	// const spreadsheetId = '1ROl3CHhKfGS55HSelmftcOr2kSgmZJvdwB4b8ktP8hI'
-	// const data = {
-	// 	'majorDimension': 'ROWS',
-	// 	'values': [""].concat(
-	// 		curves.value.map(({ name, startY, midX, midY, endX }) => t(name, startY, midX, midY, endX))
-	// 	),
-	// }
-	// await fetch(
-	// 	`/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:E:clear`,
-	// 	{
-	// 		method: 'POST',
-	// 		headers: {
-	// 			'Authorization': 'Bearer ' + realAccessToken,
-	// 		},
-	// 	},
-	// )
-
-	// const response = await fetch(
-	// 	`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A:E?valueInputOption=USER_ENTERED`,
-	// 	{
-	// 		method: 'PUT',
-	// 		headers: {
-	// 			'Authorization': 'Bearer ' + realAccessToken,
-	// 			'Content-Type': 'application/json'
-	// 		},
-	// 		body: JSON.stringify(data),
-	// 	},
-	// ).then(response => response.json())
-	// console.log(response)
+	// await revokeToken()
 }
+// async function revokeToken() {
+// 	return new Promise<void>(resolve => {
+// 		(window as any).google.accounts.oauth2.revoke(accessToken.value, () => {
+// 			accessToken.value = null
+// 			resolve()
+// 		})
+// 	})
+// }
 
 
 const { elementX, elementY } = useMouseInElement(container)
@@ -295,6 +250,8 @@ function selectCurve(index: number, type: PointType) {
 
 useEventListener(window, 'mousemove', drag)
 useEventListener(window, 'mouseup', release)
+useEventListener(window, 'touchmove', drag)
+useEventListener(window, 'touchend', release)
 </script>
 
 <style>
@@ -311,8 +268,6 @@ body { margin: 0; }
 #container {
 	display: block;
 	margin: auto;
-	width: 30vw;
-	height: 30vw;
 	margin-top: 50px;
 	margin-bottom: 50px;
 }
