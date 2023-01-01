@@ -3,7 +3,9 @@
 #top
 	.box(class="text-base prose prose-slate xl:text-xl")
 		h1
-			| S-process toy (by&nbsp;
+			| S-process toy
+			br
+			| (by&nbsp;
 			a(href="https://github.com/blainehansen/s-process-toy/") Blaine Hansen
 			| )
 
@@ -255,15 +257,13 @@ useEventListener(window, 'touchend', release)
 </script>
 
 <style>
-body { margin: 0; }
+body {
+	margin: 0;
+}
 
 #top {
-	display: block;
-	margin: auto;
-
-	overflow-x: hidden;
-	width: 100%;
-	height: 100vh;
+	padding-left: 1rem;
+	padding-right: 1rem;
 }
 #container {
 	display: block;
