@@ -28,7 +28,8 @@
 
 	.box(v-for="(curve, index) in curves")
 		p(:style="{ color: colorAtIndex(index) }")
-			b {{ curve.name }}:&nbsp;
+			b {{ curve.name }}:
+			br
 			| start={{ curve.startY.toFixed(2) }},&nbsp;
 			| mid={ x:{{ curve.midX.toFixed(2) }}, y:{{ curve.midY.toFixed(2) }} },&nbsp;
 			| end={{ curve.endX.toFixed(2) }}
