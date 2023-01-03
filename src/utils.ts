@@ -42,6 +42,14 @@ export function refPromise<T>(r: Ref<T>): Promise<NonNullable<T>> {
 	return promise
 }
 
+const colors = ['red', 'green', 'blue', 'orange', 'purple', 'yellow']
+const colorsLength = colors.length
+
+export function colorAtIndex(index: number) {
+	const colorIndex = index % colorsLength
+	return colors[colorIndex]
+}
+
 
 // const spreadsheetId = '1ROl3CHhKfGS55HSelmftcOr2kSgmZJvdwB4b8ktP8hI'
 // const data = {
